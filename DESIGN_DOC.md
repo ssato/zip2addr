@@ -26,10 +26,15 @@ using fast-api and related software.
 
 # Convert a zip code given by user to an address
 
-## API version
+## Help
 
-1. User: GET request
+1. User: GET request without query parameters
+1. App: Returns a string gives usage
 
+## Convert a zip code
+
+1. User: GET request with query parameter represents a zip code
+1. App: Returns a string represents an address
 
 # Limitations and issues
 
