@@ -4,39 +4,95 @@ from sqlalchemy.orm import Session
 from . import models, schemas
 
 
-def get_zipcode_by_id(db: Session, zipcode_id: int) -> models.Zipcode:
-    """Get *a* model instance of zip code by its ID.
+def get_zipcode(dbs: Session, zipcode: str) -> models.Zipcode:
+    """Get *a* model instance of zip code by a zip code string.
     """
-    return db.query(models.Zipcode).filter(models.Zipcode.id == zipcode_id).first()
+    return dbs.query(
+        models.Zipcode
+    ).filter(models.Zipcode.zipcode == zipcode).first()
 
 
-def get_zipcode(db: Session, zipcode: str) -> models.Zipcode:
-    """Get *a* model instance of zip code by its zip code string.
+def get_zipcodes(
+    dbs: Session, skip: int = 0, limit: int = 100
+) -> list[models.Zipcode]:
+    """Get all of model instances of zip code.
     """
-    return db.query(models.Zipcode).filter(models.Zipcode.zipcode == zipcode).first()
+    return dbs.query(models.Zipcode).offset(skip).limit(limit).all()
 
 
-def get_addr_by_zipcode(db: Session, zipcode: str) -> models.Address:
-    """Get *a* model instance of Address by correspondig zip code string.
+def get_zipcodes_by_partial_zipcode(
+        dbs: Session, partial_zipcode: str,
+        skip: int = 0, limit: int = 100
+) -> list[models.Zipcode]:
+    """Get model instances of zip code by partial zip code string.
     """
-    return get_zipcode(zipcode).addr
+    return dbs.query(
+        models.Zipcode
+    ).filter(
+        models.Zipcode.zipcode.startswith(partial_zipcode)
+    ).offset(skip).limit(limit).all()
 
 
-def get_zipcodes(db: Session, skip: int = 0, limit: int = 100):
-    """Get model instances of zip code by its zip code string.
-    """
-    return db.query(models.Zipcode).offset(skip).limit(limit).all()
-
-
-def create_address(db: Session, addr: schemas.Address):
-    """Create an address model instance from given info data.
+def create_address(
+    dbs: Session, addr: schemas.AddressCreate
+) -> models.Address:
+    """Create an address model instance.
     """
     db_addr = models.Address(
         pref=addr.pref, city_ward=addr.city_ward,
         house_numbers=addr.house_numbers
     )
-    db.add(db_addr)
-    db.commit()
-    db.refresh(db_addr)
+    dbs.add(db_addr)
+    dbs.commit()
+    dbs.refresh(db_addr)
 
     return db_addr
+
+
+def create_roman_address(
+        dbs: Session, addr: schemas.RomanAddressCreate, address_id: int
+) -> models.RomanAddress:
+    """Create an address model instance from given info data.
+    """
+    db_addr = models.RomanAddress(
+        pref=addr.pref, city_ward=addr.city_ward,
+        house_numbers=addr.house_numbers,
+        address_id=address_id
+    )
+    dbs.add(db_addr)
+    dbs.commit()
+    dbs.refresh(db_addr)
+
+    return db_addr
+
+
+def create_kana_address(
+        dbs: Session, addr: schemas.KanaAddressCreate, address_id: int
+) -> models.RomanAddress:
+    """Create an address model instance from given info data.
+    """
+    db_addr = models.KanaAddress(
+        pref=addr.pref, city_ward=addr.city_ward,
+        house_numbers=addr.house_numbers,
+        address_id=address_id
+    )
+    dbs.add(db_addr)
+    dbs.commit()
+    dbs.refresh(db_addr)
+
+    return db_addr
+
+
+def create_zipcode(
+        dbs: Session, zipcode: schemas.ZipcodeCreate, address_id: int
+) -> models.Zipcode:
+    """Create an address model instance from given info data.
+    """
+    db_zipcode = models.Zipcode(
+        zipcode=zipcode.zipcode, address_id=address_id
+    )
+    dbs.add(db_zipcode)
+    dbs.commit()
+    dbs.refresh(db_zipcode)
+
+    return db_zipcode

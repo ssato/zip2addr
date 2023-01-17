@@ -2,25 +2,82 @@
 """Data models.
 """
 import sqlalchemy
+import sqlalchemy.orm
 
 from . import db
 
 
-class Zipcode(db.Base):
-    """A model represents a database of zip codes and addresses.
+class Address(db.Base):
+    """A model represents a database of addresses.
+    """
+    __tablename__ = "addresses"
 
-    e.g.  "0640942","ﾎｯｶｲﾄﾞｳ","ｻｯﾎﾟﾛｼﾁｭｳｵｳｸ","ﾌｼﾐ","北海道","札幌市中央区","伏見"
+    id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, index=True)
+
+    pref = sqlalchemy.Column(sqlalchemy.String)
+    city_ward = sqlalchemy.Column(sqlalchemy.String)
+    house_numbers = sqlalchemy.Column(sqlalchemy.String)
+
+    kana = sqlalchemy.orm.relationship(
+        "KanaAddress", back_populates="address", uselist=False
+    )
+    roman = sqlalchemy.orm.relationship(
+        "RomanAddress", back_populates="address", uselist=False
+    )
+    zipcode = sqlalchemy.orm.relationship(
+        "Zipcode", back_populates="address", uselist=False
+    )
+
+
+class KanaAddress(db.Base):
+    """A model represents a database of kana addresses.
+    """
+    __tablename__ = "kana_addresses"
+
+    id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, index=True)
+
+    pref = sqlalchemy.Column(sqlalchemy.String)
+    city_ward = sqlalchemy.Column(sqlalchemy.String)
+    house_numbers = sqlalchemy.Column(sqlalchemy.String)
+
+    address_id = sqlalchemy.Column(
+        sqlalchemy.Integer, sqlalchemy.ForeignKey("addresses.id")
+    )
+    address = sqlalchemy.orm.relationship(
+        "Address", back_populates="kana", uselist=False
+    )
+
+
+class RomanAddress(db.Base):
+    """A model represents a database of roman addresses.
+    """
+    __tablename__ = "roman_addresses"
+
+    id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, index=True)
+
+    pref = sqlalchemy.Column(sqlalchemy.String)
+    city_ward = sqlalchemy.Column(sqlalchemy.String)
+    house_numbers = sqlalchemy.Column(sqlalchemy.String)
+
+    address_id = sqlalchemy.Column(
+        sqlalchemy.Integer, sqlalchemy.ForeignKey("addresses.id")
+    )
+    address = sqlalchemy.orm.relationship(
+        "Address", back_populates="roman", uselist=False
+    )
+
+
+class Zipcode(db.Base):
+    """A model represents a database of zip codes.
     """
     __tablename__ = "zipcodes"
 
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, index=True)
 
     zipcode = sqlalchemy.Column(sqlalchemy.String, unique=True, index=True)
-
-    pref = sqlalchemy.Column(sqlalchemy.String)
-    city_ward = sqlalchemy.Column(sqlalchemy.String)
-    house_numbers = sqlalchemy.Column(sqlalchemy.String)
-
-    kana_pref = sqlalchemy.Column(sqlalchemy.String)
-    kana_city_ward = sqlalchemy.Column(sqlalchemy.String)
-    kana_house_numbers = sqlalchemy.Column(sqlalchemy.String)
+    address_id = sqlalchemy.Column(
+        sqlalchemy.Integer, sqlalchemy.ForeignKey("addresses.id")
+    )
+    address = sqlalchemy.orm.relationship(
+        "Address", back_populates="zipcode", uselist=False
+    )
