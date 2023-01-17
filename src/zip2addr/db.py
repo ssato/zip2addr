@@ -9,29 +9,35 @@ import sqlalchemy.orm
 from . import constants
 
 
-ENGINE = sqlalchemy.create_engine(
-    constants.DATABASE_URI, connect_args={"check_same_thread": False},
-    echo=True
-)
-
-SessionLocal = sqlalchemy.orm.sessionmaker(
-    autocommit=False, autoflush=False, bind=ENGINE
-)
 Base = sqlalchemy.ext.declarative.declarative_base()
 
 
-def get_session():
+def get_engine(
+    filepath: str = constants.DATABASE_FILEPATH
+):
+    """Get an initialized database engine instance.
+    """
+    return sqlalchemy.create_engine(
+        f"sqlite:///{filepath}",
+        connect_args={"check_same_thread": False},
+        echo=True
+    )
+
+
+def get_session(engine):
     """Get a database session.
     """
-    dbs = SessionLocal()
+    session_cls = sqlalchemy.orm.sessionmaker(
+        autocommit=False, autoflush=False, bind=engine
+    )
+    dbs = session_cls()
     try:
         return dbs
     finally:
         dbs.close()
 
 
-def init(renew: bool = True):
+def init(engine):
     """Create a database.
     """
-    if renew:
-        Base.metadata.create_all(bind=ENGINE)
+    Base.metadata.create_all(bind=engine)
