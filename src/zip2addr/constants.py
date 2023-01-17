@@ -11,4 +11,4 @@ JSON_FILEPATH: typing.Final[str] = "zipcodes.json"
 
 # .. seealso:: https://peps.python.org/pep-0591/
 DATABASE_FILENAME: typing.Final[str] = "zipcodes.db"
-DATABASE_URI: typing.Final[str] = "sqlite:///./" + DATABASE_FILENAME
+DATABASE_FILEPATH: typing.Final[str] = f"./{DATABASE_FILENAME}"
