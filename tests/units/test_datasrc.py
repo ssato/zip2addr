@@ -1,4 +1,4 @@
-# Copyright (C) 2023 Satoru SATOH <ssato@redhat.com>
+# Copyright (C) 2023 Satoru SATOH <satoru.satoh@gmail.com>
 # SPDX-License-Identifier: MIT
 #
 # pylint: disable=invalid-name

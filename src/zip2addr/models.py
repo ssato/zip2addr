@@ -1,5 +1,12 @@
+# Copyright (C) 2023 Satoru SATOH <satoru.satoh at gmail.com>
+# SPDX-License-Identifier: MIT
+#
 # pylint: disable=too-few-public-methods
+#
 """Data models.
+
+.. seealso::
+   https://docs.sqlalchemy.org/en/14/orm/basic_relationships.html
 """
 import sqlalchemy
 import sqlalchemy.orm
