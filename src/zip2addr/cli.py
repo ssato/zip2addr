@@ -7,18 +7,20 @@ import click
 from . import constants, datasrc
 
 
-@click.command()
-@click.option("--datadir", "-d", default='.')
-@click.option("--roman", "-R", default=constants.ROMAN_ZIPCODE_FILENAME)
-@click.option("--kana", "-K", default=constants.KANA_ZIPCODE_FILENAME)
-@click.option("--out", "-O", default=constants.JSON_FILEPATH)
-def make_database(datadir: str, roman: str, kana: str, out: str):
+@click.group()
+def main():
+    """main entry point.
+    """
+
+
+@main.command()
+@main.option("--datadir", "-d", default='.')
+@main.option("--roman", "-R", default=constants.ROMAN_ZIPCODE_FILENAME)
+@main.option("--kana", "-K", default=constants.KANA_ZIPCODE_FILENAME)
+@main.option("--out", "-O", default=constants.JSON_FILEPATH)
+def initdb(datadir: str, roman: str, kana: str, out: str):
     """Prase csv files and dump its result as a database file.
     """
     datasrc.make_database_from_csv_files(
         datadir=datadir, roman_filename=roman, kana_filename=kana, outpath=out
     )
-
-
-if __name__ == '__main__':
-    make_database()
