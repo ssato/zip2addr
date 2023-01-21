@@ -1,1 +1,5 @@
 anyconfig
+click
+fastapi
+pydantic
+sqlalchemy
