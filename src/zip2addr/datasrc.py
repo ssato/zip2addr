@@ -1,3 +1,5 @@
+# Copyright (C) 2023 Satoru SATOH <satoru.satoh at gmail.com>
+# SPDX-License-Identifier: MIT
 """coding: utf-8
 
 zip code data loading stuff.
@@ -35,10 +37,12 @@ CSV data:
 """
 import collections
 import csv
+import itertools
 import logging
 import pathlib
 import time
 import typing
+import zipfile
 
 import anyconfig
 
@@ -47,7 +51,7 @@ from . import constants, db, models
 
 LOG = logging.getLogger(__name__)
 
-ROMAN_ROW_KEYS: tuple[typing.Literal, ...] = tuple("""
+ROMAN_ROW_KEYS: tuple[str, ...] = tuple("""
 zipcode
 pref
 city_ward
@@ -57,7 +61,7 @@ roman_city_ward
 roman_house_numbers
 """.split())
 
-KANA_ROW_KEYS: tuple[typing.Literal, ...] = tuple("""
+KANA_ROW_KEYS: tuple[str, ...] = tuple("""
 _city_id_or_something
 _partial_zip_code
 zipcode
@@ -68,6 +72,13 @@ pref
 city_ward
 house_numbers
 """.split())
+
+ROW_KEYS_SET: tuple[tuple[str, ...], ...] = (
+    ROMAN_ROW_KEYS,
+    KANA_ROW_KEYS
+)
+
+CURDIR = pathlib.Path(".")
 
 
 def backup_if_it_exists(
@@ -84,20 +95,41 @@ def backup_if_it_exists(
         filepath.rename(f"{filepath!s}.{suffix}")
 
 
+def extract_file_from_zip_file(
+    zip_filepath: pathlib.Path, outdir: pathlib.Path, filename: str
+):
+    """
+    Extract a csv file from the zip file.
+    """
+    with zipfile.ZipFile(zip_filepath) as zipf:
+        if not outdir.exists():
+            outdir.mkdir(parents=True)
+
+        if filename not in zipf.namelist():
+            raise OSError(f"{filename} was NOT found in {zip_filepath}.")
+
+        zipf.extract(filename, path=outdir)
+
+
 def parse_roman_or_kana_data(
-    row: list[str], keys: tuple[typing.Literal, ...]
+    row: list[str], keys: tuple[str, ...]
 ) -> typing.Optional[dict]:
     """Parse roman or kana zip code data row strings.
     """
+    default = None
+
+    if not row:
+        return default
+
     try:
         return dict(zip(keys, row))
     except (ValueError, TypeError):
-        return None
+        return default
 
 
 def load_and_parse(
-    filepath: pathlib.Path, keys: tuple[typing.Literal, ...]
-) -> typing.Iterator[dict]:
+    filepath: pathlib.Path, keys: tuple[str, ...]
+) -> typing.Iterator[typing.Optional[dict]]:
     """Load zip code data in csv format.
     """
     with filepath.open(encoding='shift_jis') as csvf:
@@ -106,9 +138,8 @@ def load_and_parse(
 
 
 def load_from_files(
-    datadir: pathlib.Path = pathlib.Path('.'),
-    roman_filename: str = constants.ROMAN_ZIPCODE_FILENAME,
-    kana_filename: str = constants.KANA_ZIPCODE_FILENAME
+    datadir: pathlib.Path = CURDIR,
+    csv_filenames: tuple[str, ...] = constants.ZIPCODE_CSV_FILENAMES
 ) -> list[dict[str, str]]:
     """
     Load and parse zip code data files in csv format and return parsed data.
@@ -116,80 +147,78 @@ def load_from_files(
     # zipcode: <zipcode dict>
     zipcodes: typing.OrderedDict[str, dict] = collections.OrderedDict()
 
-    roman_filepath = datadir / roman_filename
-    kana_filepath = datadir / kana_filename
+    all_keys = set(itertools.chain(*ROW_KEYS_SET))
 
-    for idx, zdata in enumerate(
-        load_and_parse(roman_filepath, ROMAN_ROW_KEYS)
-    ):
-        if zdata is None:
-            LOG.warning(
-                "Failed to load and parse the line #%d in the file %s",
-                idx, roman_filepath
-            )
-            continue
+    for keys, filename in zip(ROW_KEYS_SET, csv_filenames):
+        filepath = datadir / filename
 
-        # For cases corresponding kana address data will be missing.
-        zdata["kana_pref"] = ""
-        zdata["kana_city_ward"] = ""
-        zdata["kana_house_numbers"] = ""
+        for idx, zdata in enumerate(load_and_parse(filepath, keys)):
+            if zdata is None:
+                LOG.warning(
+                    "Failed to load and parse the line #%d in the file %s",
+                    idx, filename
+                )
+                continue
 
-        zipcodes[zdata["zipcode"]] = zdata
+            zipcode = zdata["zipcode"]
 
-    for idx, zdata in enumerate(
-        load_and_parse(kana_filepath, KANA_ROW_KEYS)
-    ):
-        if zdata is None:
-            LOG.warning(
-                "Failed to load and parse the line #%d in the file %s",
-                idx, kana_filepath
-            )
-            continue
+            if zipcode in zipcodes:
+                zipcodes[zipcode].update(**zdata)
+            else:
+                # For cases corresponding another data is missing.
+                for key in all_keys:
+                    if key not in zdata:
+                        zdata[key] = ""
 
-        zipcode = zdata["zipcode"]
-
-        if zipcode in zipcodes:
-            zipcodes[zipcode].update(**zdata)
-        else:
-            # For cases corresponding roman address data is missing.
-            zdata["roman_pref"] = ""
-            zdata["roman_city_ward"] = ""
-            zdata["roman_house_numbers"] = ""
-
-            zipcodes[zipcode] = zdata
+                zipcodes[zipcode] = zdata
 
     return list(zipcodes.values())
 
 
 def load_and_save_as_json(
-    datadir: pathlib.Path = pathlib.Path('.'),
-    roman_filename: str = constants.ROMAN_ZIPCODE_FILENAME,
-    kana_filename: str = constants.KANA_ZIPCODE_FILENAME,
-    outpath: str = constants.JSON_FILEPATH
+    outdir: pathlib.Path,
+    datadir: pathlib.Path = CURDIR,
+    csv_filenames: tuple[str, ...] = constants.ZIPCODE_CSV_FILENAMES,
+    outname: str = constants.JSON_FILENAME
 ):
     """
     Load and parse zip code data files in csv format and dump parsed data to a
     json file.
     """
-    res = load_from_files(datadir, roman_filename, kana_filename)
+    res = load_from_files(datadir, csv_filenames)
 
-    opath = pathlib.Path(outpath)
-    backup_if_it_exists(opath)
+    if res:
+        opath = outdir / outname
 
-    anyconfig.dump(res, outpath)
+        if not outdir.exists():
+            outdir.mkdir(parents=True)
+
+        backup_if_it_exists(opath)
+        anyconfig.dump(res, opath)  # type: ignore
+    else:
+        LOG.error("Failed to get data from %s and %s", *csv_filenames)
 
 
 def load_json_and_save_as_db(
-    filepath: str = constants.JSON_FILEPATH, renew: bool = True
+    outdir: pathlib.Path,
+    filename: str = constants.JSON_FILENAME,
+    outname: str = constants.DATABASE_FILENAME,
 ):
     """
     Load zip code parsed data in a json file and dump its data as a database
     file.
     """
-    backup_if_it_exists(pathlib.Path(constants.DATABASE_FILENAME))
+    filepath = outdir / filename
+    outpath = outdir / outname
 
-    db.init(renew=renew)
-    dbs = db.get_session()
+    if not outdir.exists():
+        outdir.mkdir(parents=True)
+
+    backup_if_it_exists(outpath)
+
+    engine = db.get_engine(str(outpath))
+    db.init(engine)
+    dbs = db.get_session(engine)
 
     for zdata in anyconfig.load(filepath):
         addr = models.Address(
@@ -230,3 +259,20 @@ def load_json_and_save_as_db(
 
     dbs.commit()
     dbs.close()
+
+
+def make_database_from_zip_files(
+    outdir: pathlib.Path,
+    datadir: pathlib.Path = CURDIR,
+    zip_filenames: tuple[str, ...] = constants.ZIPCODE_ZIP_FILENAMES,
+    csv_filenames: tuple[str, ...] = constants.ZIPCODE_CSV_FILENAMES,
+    outname: str = constants.DATABASE_FILENAME,
+):
+    """
+    Load and parse zip code data files in csv format and return parsed data.
+    """
+    for zname, fname in zip(zip_filenames, csv_filenames):
+        extract_file_from_zip_file(datadir / zname, datadir, fname)
+
+    load_from_files(datadir=datadir, csv_filenames=csv_filenames)
+    load_json_and_save_as_db(outdir, outname=outname)
