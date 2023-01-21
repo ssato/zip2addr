@@ -17,7 +17,7 @@ def main():
 @main.option("--datadir", "-d", default='.')
 @main.option("--roman", "-R", default=constants.ROMAN_ZIPCODE_FILENAME)
 @main.option("--kana", "-K", default=constants.KANA_ZIPCODE_FILENAME)
-@main.option("--out", "-O", default=constants.JSON_FILEPATH)
+@main.option("--out", "-O", default=constants.JSON_FILENAME)
 def initdb(datadir: str, roman: str, kana: str, out: str):
     """Prase csv files and dump its result as a database file.
     """
