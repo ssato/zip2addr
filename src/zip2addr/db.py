@@ -2,6 +2,10 @@
 
 .. seealso:: https://fastapi.tiangolo.com/ja/tutorial/sql-databases/
 """
+import contextlib
+import pathlib
+import typing
+
 import sqlalchemy
 import sqlalchemy.orm
 
@@ -12,7 +16,7 @@ Base = sqlalchemy.orm.declarative_base()
 
 
 def get_engine(
-    filepath: str = constants.DATABASE_FILEPATH
+    filepath: typing.Union[str, pathlib.Path] = constants.DATABASE_FILEPATH
 ):
     """Get an initialized database engine instance.
     """
@@ -23,20 +27,33 @@ def get_engine(
     )
 
 
-def get_session(engine):
-    """Get a database session.
-    """
-    session_cls = sqlalchemy.orm.sessionmaker(
-        autocommit=False, autoflush=False, bind=engine
-    )
-    dbs = session_cls()
-    try:
-        return dbs
-    finally:
-        dbs.close()
-
-
 def init(engine):
     """Create a database.
     """
     Base.metadata.create_all(bind=engine)
+
+
+@contextlib.contextmanager
+def get_session(
+    filepath: typing.Union[str, pathlib.Path], read_only: bool = False
+):
+    """Get a database session.
+    """
+    engine = get_engine(filepath)
+    init(engine)
+
+    session_cls = sqlalchemy.orm.sessionmaker(
+        autocommit=False, autoflush=False, bind=engine
+    )
+
+    dbs = session_cls()
+    try:
+        yield dbs
+        if not read_only:
+            dbs.commit()
+    except:  # noqa: E722
+        if not read_only:
+            dbs.rollback()
+        raise
+    finally:
+        dbs.close()
