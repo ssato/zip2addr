@@ -1,0 +1,54 @@
+# :see: https://fedoraproject.org/wiki/Packaging:Python
+# :see: https://fedoraproject.org/wiki/Packaging:Guidelines#Web_Applications
+# :see: https://fedoraproject.org/wiki/Packaging:Web_Assets
+%global pkgname zip2addr
+%global srcname zip2addr
+%global desc \
+Python library and some utility tools and web frontend to convert and \
+search Japan zip codes.
+
+Name:           %{pkgname}
+Version:        @VERSION@
+Release:        1%{?dist}
+Summary:        Utility and library to convert, search Japan zip codes
+Group:          Applications/System
+License:        MIT
+URL:            https://github.com/ssato/%{srcname}
+Source0:        %{srcname}-%{version}.tar.gz
+BuildArch:      noarch
+BuildRequires:  python3-devel
+BuildRequires:  python3-setuptools
+
+%description    %{desc}
+
+%package     -n python3-%{pkgname}
+Summary:        %{summary}
+Requires:       python3-anyconfig
+Requires:       python3-click
+Requires:       python3-fastapi
+Requires:       python3-pydantic
+Requires:       python3-sqlalchemy
+%{?python_provide:%python_provide python3-%{pkgname}}
+
+%description -n python3-%{pkgname}
+%{desc}
+
+%prep
+%autosetup -n %{pkgname}-%{version}
+
+%build
+%py3_build
+
+%install
+%py3_install
+
+%files -n python3-%{pkgname}
+%doc DESIGN_DOC.md
+%doc README.md
+%license LICENSE.MIT
+%{python3_sitelib}/*
+%{_bindir}/*
+
+%changelog
+* Sun Jan 22 2023 Satoru SATOH <satoru.satoh@gmail.com> - 0.1.0-1
+- Initial packaging
