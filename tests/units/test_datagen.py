@@ -6,7 +6,6 @@
 # pylint: disable=missing-module-docstring
 # pylint: disable=missing-class-docstring
 # pylint: disable=missing-function-docstring
-import pathlib
 import shutil
 import time
 import zipfile
@@ -29,11 +28,6 @@ ZIP_FILENAMES = (
     constants.ROMAN_ZIPCODE_ZIP_FILENAME,
     constants.KANA_ZIPCODE_ZIP_FILENAME
 )
-
-
-@pytest.fixture(name="my_datadir")
-def get_datadir(request) -> pathlib.Path:
-    return pathlib.Path(request.fspath).parent.parent / "data"
 
 
 @pytest.mark.parametrize(
