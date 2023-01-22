@@ -9,7 +9,7 @@ import typing
 import sqlalchemy
 import sqlalchemy.orm
 
-from . import constants
+from . import constants, utils
 
 
 Base = sqlalchemy.orm.declarative_base()
@@ -23,7 +23,7 @@ def get_engine(
     return sqlalchemy.create_engine(
         f"sqlite:///{filepath}",
         connect_args={"check_same_thread": False},
-        echo=True
+        echo=utils.is_verbose_mode()
     )
 
 
@@ -40,7 +40,8 @@ def get_session(
     """Get a database session.
     """
     engine = get_engine(filepath)
-    init(engine)
+    if not read_only:
+        init(engine)
 
     session_cls = sqlalchemy.orm.sessionmaker(
         autocommit=False, autoflush=False, bind=engine
