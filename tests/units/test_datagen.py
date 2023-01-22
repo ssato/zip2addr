@@ -15,7 +15,7 @@ import pytest
 
 from zip2addr import (
     constants,
-    datasrc as TT,
+    datagen as TT,
     db,
     models
 )
