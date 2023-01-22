@@ -78,8 +78,6 @@ ROW_KEYS_SET: tuple[tuple[str, ...], ...] = (
     KANA_ROW_KEYS
 )
 
-CURDIR = pathlib.Path(".")
-
 
 def backup_if_it_exists(
     filepath: pathlib.Path,
@@ -100,13 +98,12 @@ def extract_file_from_zip_file(
 ):
     """
     Extract a csv file from the zip file.
+
+    :raiess: FileNotFoundError, KeyError, zipfile.BadZipFile
     """
     with zipfile.ZipFile(zip_filepath) as zipf:
         if not outdir.exists():
             outdir.mkdir(parents=True)
-
-        if filename not in zipf.namelist():
-            raise OSError(f"{filename} was NOT found in {zip_filepath}.")
 
         zipf.extract(filename, path=outdir)
 
@@ -138,7 +135,7 @@ def load_and_parse(
 
 
 def load_from_files(
-    datadir: pathlib.Path = CURDIR,
+    datadir: pathlib.Path,
     csv_filenames: tuple[str, ...] = constants.ZIPCODE_CSV_FILENAMES
 ) -> list[dict[str, str]]:
     """
@@ -176,8 +173,8 @@ def load_from_files(
 
 
 def load_and_save_as_json(
+    datadir: pathlib.Path,
     outdir: pathlib.Path,
-    datadir: pathlib.Path = CURDIR,
     csv_filenames: tuple[str, ...] = constants.ZIPCODE_CSV_FILENAMES,
     outname: str = constants.JSON_FILENAME
 ):
@@ -200,6 +197,7 @@ def load_and_save_as_json(
 
 
 def load_json_and_save_as_db(
+    datadir: pathlib.Path,
     outdir: pathlib.Path,
     filename: str = constants.JSON_FILENAME,
     outname: str = constants.DATABASE_FILENAME,
@@ -208,71 +206,76 @@ def load_json_and_save_as_db(
     Load zip code parsed data in a json file and dump its data as a database
     file.
     """
-    filepath = outdir / filename
+    filepath = datadir / filename
     outpath = outdir / outname
+
+    if not filepath.exists():
+        LOG.error("Not found: %s", str(filepath))
+        return
+
+    with filepath.open(mode='rb') as bfd:
+        if not bfd.read1(5):
+            LOG.error("No data: %s", str(filepath))
+            return
 
     if not outdir.exists():
         outdir.mkdir(parents=True)
 
     backup_if_it_exists(outpath)
 
-    engine = db.get_engine(str(outpath))
-    db.init(engine)
-    dbs = db.get_session(engine)
+    with db.get_session(outpath) as dbs:
+        for zdata in anyconfig.load(filepath):
+            addr = models.Address(
+                pref=zdata['pref'],
+                city_ward=zdata['city_ward'],
+                house_numbers=zdata['house_numbers']
+            )
+            dbs.add(addr)
+            dbs.commit()
+            dbs.refresh(addr)
 
-    for zdata in anyconfig.load(filepath):
-        addr = models.Address(
-            pref=zdata['pref'],
-            city_ward=zdata['city_ward'],
-            house_numbers=zdata['house_numbers']
-        )
-        dbs.add(addr)
-        dbs.commit()
-        dbs.refresh(addr)
+            kana_addr = models.KanaAddress(
+                pref=zdata['kana_pref'],
+                city_ward=zdata['kana_city_ward'],
+                house_numbers=zdata['kana_house_numbers'],
+                address_id=addr.id
+            )
+            dbs.add(kana_addr)
+            dbs.commit()
+            dbs.refresh(kana_addr)
 
-        kana_addr = models.KanaAddress(
-            pref=zdata['kana_pref'],
-            city_ward=zdata['kana_city_ward'],
-            house_numbers=zdata['kana_house_numbers'],
-            address_id=addr.id
-        )
-        dbs.add(kana_addr)
-        dbs.commit()
-        dbs.refresh(kana_addr)
+            roman_addr = models.KanaAddress(
+                pref=zdata['roman_pref'],
+                city_ward=zdata['roman_city_ward'],
+                house_numbers=zdata['roman_house_numbers'],
+                address_id=addr.id
+            )
+            dbs.add(roman_addr)
+            dbs.commit()
+            dbs.refresh(roman_addr)
 
-        roman_addr = models.KanaAddress(
-            pref=zdata['roman_pref'],
-            city_ward=zdata['roman_city_ward'],
-            house_numbers=zdata['roman_house_numbers'],
-            address_id=addr.id
-        )
-        dbs.add(roman_addr)
-        dbs.commit()
-        dbs.refresh(roman_addr)
-
-        zipcode = models.Zipcode(
-            zipcode=zdata['zipcode'],
-            address_id=addr.id
-        )
-        dbs.add(zipcode)
-        dbs.commit()
-
-    dbs.commit()
-    dbs.close()
+            zipcode = models.Zipcode(
+                zipcode=zdata['zipcode'],
+                address_id=addr.id
+            )
+            dbs.add(zipcode)
+            dbs.commit()
 
 
 def make_database_from_zip_files(
+    datadir: pathlib.Path,
     outdir: pathlib.Path,
-    datadir: pathlib.Path = CURDIR,
     zip_filenames: tuple[str, ...] = constants.ZIPCODE_ZIP_FILENAMES,
     csv_filenames: tuple[str, ...] = constants.ZIPCODE_CSV_FILENAMES,
     outname: str = constants.DATABASE_FILENAME,
 ):
     """
     Load and parse zip code data files in csv format and return parsed data.
+
+    :raiess: FileNotFoundError, KeyError, zipfile.BadZipFile
     """
     for zname, fname in zip(zip_filenames, csv_filenames):
         extract_file_from_zip_file(datadir / zname, datadir, fname)
 
-    load_from_files(datadir=datadir, csv_filenames=csv_filenames)
-    load_json_and_save_as_db(outdir, outname=outname)
+    load_and_save_as_json(datadir, outdir, csv_filenames=csv_filenames)
+    load_json_and_save_as_db(datadir, outdir, outname=outname)
