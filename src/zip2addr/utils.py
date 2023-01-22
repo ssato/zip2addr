@@ -32,5 +32,5 @@ def get_term_lines():
     """
     try:
         return os.get_terminal_size().lines
-    except:  # noqa: E722
+    except BaseException:
         return 50
