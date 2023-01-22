@@ -23,8 +23,8 @@ def set_verbose_mode():
 
 def initdb(
     datadir: str, output: str,
-    zip_filenames: tuple[str, str] = constants.ZIPCODE_ZIP_FILENAMES,
-    csv_filenames: tuple[str, str] = constants.ZIPCODE_CSV_FILENAMES
+    zip_filenames: tuple[str, ...] = constants.ZIPCODE_ZIP_FILENAMES,
+    csv_filenames: tuple[str, ...] = constants.ZIPCODE_CSV_FILENAMES
 ):
     """
     Prase csv files extracted from zip files, save resutl data as a db file.
@@ -49,7 +49,7 @@ def search_by_zipcode(
     dpath = pathlib.Path(db_path)
     if not dpath.exists():
         utils.get_logger().error(f"Not found: {db_path}")
-        return
+        return []
 
     with db.get_session(dpath, read_only=True) as dbs:
         res = crud.get_zipcodes_by_partial_zipcode(

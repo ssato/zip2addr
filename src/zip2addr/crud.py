@@ -1,11 +1,15 @@
 """Functions for CRUD operations.
 """
+import typing
+
 from sqlalchemy.orm import Session
 
 from . import constants, models, schemas
 
 
-def get_zipcode(dbs: Session, zipcode: str) -> models.Zipcode:
+def get_zipcode(
+    dbs: Session, zipcode: str
+) -> typing.Optional[models.Zipcode]:
     """Get *a* model instance of zip code by a zip code string.
     """
     return dbs.query(
