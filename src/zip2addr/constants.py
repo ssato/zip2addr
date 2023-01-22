@@ -3,6 +3,7 @@
 import typing
 
 
+NAME: typing.Final[str] = "zip2addr"
 VERSION: tuple[int, int, int] = (0, 1, 0)
 
 # .. seealso:: https://www.post.japanpost.jp/zipcode/download.html
@@ -25,3 +26,6 @@ JSON_FILENAME: typing.Final[str] = "zipcodes.json"
 # .. seealso:: https://peps.python.org/pep-0591/
 DATABASE_FILENAME: typing.Final[str] = "zipcodes.db"
 DATABASE_FILEPATH: typing.Final[str] = f"./{DATABASE_FILENAME}"
+
+# # of limit of results to get, etc.
+LIMIT: typing.Final[int] = 100
