@@ -98,7 +98,7 @@ class Zipcode(db.Base):
             """Get an address' child's attr.
             """
             # .. todo:: SAWarning: Multiple rows returned with uselist=False...
-            child= getattr(self.address, child, None)
+            child = getattr(self.address, child, None)
             return "" if child is None else getattr(child, attr)
 
         return dict(
