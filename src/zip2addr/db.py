@@ -7,6 +7,7 @@ import pathlib
 import typing
 
 import sqlalchemy
+import sqlalchemy.exc
 import sqlalchemy.orm
 
 from . import constants, utils
@@ -52,7 +53,7 @@ def get_session(
         yield dbs
         if not read_only:
             dbs.commit()
-    except BaseException:
+    except sqlalchemy.exc.SQLAlchemyError:
         if not read_only:
             dbs.rollback()
         raise
