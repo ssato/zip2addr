@@ -9,12 +9,15 @@
 import pathlib
 import shutil
 import time
+import zipfile
 
 import pytest
 
 from zip2addr import (
     constants,
-    datasrc as TT
+    datasrc as TT,
+    db,
+    models
 )
 
 
@@ -28,18 +31,9 @@ ZIP_FILENAMES = (
 )
 
 
-@pytest.fixture(name="curdir")
-def get_curdir(request) -> pathlib.Path:
-    """
-    .. seealso::
-       https://docs.pytest.org/en/6.2.x/reference.html#std-fixture-request
-    """
-    return pathlib.Path(request.fspath).parent
-
-
 @pytest.fixture(name="my_datadir")
 def get_datadir(request) -> pathlib.Path:
-    return pathlib.Path(request.fspath).parent.parent.parent / "data"
+    return pathlib.Path(request.fspath).parent.parent / "data"
 
 
 @pytest.mark.parametrize(
@@ -76,7 +70,7 @@ def test_extract_file_from_zip_file(subdir, tmp_path):
     ok_filename = "foo.csv"
     ng_filename = "it_does_not_exist.csv"
 
-    with TT.zipfile.ZipFile(str(zip_filepath), mode='w') as zipf:
+    with zipfile.ZipFile(str(zip_filepath), mode='w') as zipf:
         zipf.writestr(ok_filename, data_s)
 
     assert zip_filepath.exists()
@@ -84,7 +78,7 @@ def test_extract_file_from_zip_file(subdir, tmp_path):
     TT.extract_file_from_zip_file(zip_filepath, outdir, ok_filename)
     assert (outdir / ok_filename).exists()
 
-    with pytest.raises(OSError) as exc:
+    with pytest.raises(KeyError) as exc:
         TT.extract_file_from_zip_file(zip_filepath, outdir, ng_filename)
     assert not (outdir / ng_filename).exists()
     assert ng_filename in str(exc.value)
@@ -118,73 +112,116 @@ def test_parse_roman_or_kana_data(row, keys, expected):
     assert TT.parse_roman_or_kana_data(row, keys) == expected
 
 
+def test_load_and_parse_no_data(tmp_path):
+    filepath = tmp_path / "test.csv"
+    filepath.touch()
+
+    assert not list(TT.load_and_parse(filepath, TT.ROMAN_ROW_KEYS))
+
+
 @pytest.mark.parametrize(
-    ("zip_filename", "filename", "keys"),
-    ((constants.ROMAN_ZIPCODE_ZIP_FILENAME,
-      constants.ROMAN_ZIPCODE_FILENAME,
-      TT.ROMAN_ROW_KEYS),
-     (constants.KANA_ZIPCODE_ZIP_FILENAME,
-      constants.KANA_ZIPCODE_FILENAME,
-      TT.KANA_ROW_KEYS),
+    ("filename", "keys"),
+    ((constants.ROMAN_ZIPCODE_FILENAME, TT.ROMAN_ROW_KEYS),
+     (constants.KANA_ZIPCODE_FILENAME, TT.KANA_ROW_KEYS),
      ),
 )
-def test_load_and_parse(zip_filename, filename, keys, my_datadir, tmp_path):
-    TT.extract_file_from_zip_file(
-        my_datadir / zip_filename, tmp_path, filename
-    )
-    filepath = tmp_path / filename
-    assert filepath.exists()
-
+def test_load_and_parse(filename, keys, my_datadir):
+    filepath = my_datadir / filename
     res = list(TT.load_and_parse(filepath, keys))
     assert res
+    assert len(res) == len((filepath.open(encoding='shift_jis')).readlines())
 
 
-@pytest.mark.parametrize(
-    ("csv_filenames", ),
-    ((constants.ZIPCODE_CSV_FILENAMES, ),
-     ),
-)
-def test_load_from_files_have_no_data(csv_filenames, tmp_path):
-    for fname in csv_filenames:
+def test_load_from_files_have_no_data(tmp_path):
+    for fname in constants.ZIPCODE_CSV_FILENAMES:
         (tmp_path / fname).touch()
 
-    assert TT.load_from_files(tmp_path, csv_filenames) == []
+    assert not TT.load_from_files(tmp_path, constants.ZIPCODE_CSV_FILENAMES)
 
 
-@pytest.mark.parametrize(
-    ("filenames", "zip_filenames"),
-    ((constants.ZIPCODE_CSV_FILENAMES,
-      constants.ZIPCODE_ZIP_FILENAMES),
-     ),
-)
-def test_load_from_files(filenames, zip_filenames, my_datadir, tmp_path):
+def test_load_from_files(my_datadir, tmp_path):
+    filenames = constants.ZIPCODE_CSV_FILENAMES
     alt_filenames = tuple(f"{n}.copy.csv" for n in filenames)
 
-    for zname, fname, aname in zip(zip_filenames, filenames, alt_filenames):
-        TT.extract_file_from_zip_file(my_datadir / zname, tmp_path, fname)
-        filepath = tmp_path / fname
-        assert filepath.exists()
+    for fname, aname in zip(filenames, alt_filenames):
+        # altanative.
+        # (tmp_path / aname).write_bytes((my_datadir / fname).read_bytes())
+        shutil.copyfile(str(my_datadir / fname), str(tmp_path / aname))
 
-        # alt. (tmp_path / aname).write_bytes(filepath.read_bytes())
-        shutil.copyfile(str(filepath), str(tmp_path / aname))
-
-    assert TT.load_from_files(tmp_path)
+    assert TT.load_from_files(my_datadir)
+    assert TT.load_from_files(my_datadir, filenames)
     assert TT.load_from_files(tmp_path, alt_filenames)
+
+
+def test_load_and_save_as_json_no_data(tmp_path):
+    for fname in constants.ZIPCODE_CSV_FILENAMES:
+        (tmp_path / fname).touch()
+
+    outdir = tmp_path / "out"
+    TT.load_and_save_as_json(tmp_path, outdir)
+    assert not outdir.exists()
+    assert not (outdir / constants.JSON_FILENAME).exists()
 
 
 @pytest.mark.parametrize(
     ("outname", ),
     ((constants.JSON_FILENAME, ),
-     ("foo.json", ),
+     ("out.json", ),
      )
 )
 def test_load_and_save_as_json(outname, my_datadir, tmp_path):
-    for zname, fname in zip(constants.ZIPCODE_ZIP_FILENAMES,
-                            constants.ZIPCODE_CSV_FILENAMES):
-        TT.extract_file_from_zip_file(my_datadir / zname, tmp_path, fname)
-        filepath = tmp_path / fname
-        assert filepath.exists()
-
     outdir = tmp_path / "out"
-    TT.load_and_save_as_json(outdir, tmp_path, outname=outname)
+    TT.load_and_save_as_json(my_datadir, outdir, outname=outname)
+    shutil.copyfile(str(outdir / outname), "/tmp/zipcode.json")
     assert (outdir / outname).exists()
+    assert TT.anyconfig.load(outdir / outname)
+
+
+def test_load_json_and_save_as_db_no_data(tmp_path):
+    (tmp_path / constants.JSON_FILENAME).touch()
+    TT.load_json_and_save_as_db(tmp_path, tmp_path)
+    assert not (tmp_path / constants.DATABASE_FILENAME).exists()
+
+
+def test_load_json_and_save_as_db(my_datadir, tmp_path):
+    TT.load_json_and_save_as_db(my_datadir, tmp_path)
+    outpath = tmp_path / constants.DATABASE_FILENAME
+    assert outpath.exists()
+
+    engine = db.get_engine(str(outpath))
+    db.init(engine)
+    with db.get_session(outpath) as dbs:
+        assert dbs.query(models.Zipcode).all()
+
+
+def test_make_database_from_zip_files_errors(tmp_path):
+    with pytest.raises(FileNotFoundError):
+        TT.make_database_from_zip_files(tmp_path, tmp_path)
+
+    (tmp_path / constants.ZIPCODE_ZIP_FILENAMES[0]).touch()
+    with pytest.raises(zipfile.BadZipFile):
+        TT.make_database_from_zip_files(tmp_path, tmp_path)
+
+    # prepare zip files contains csv files with no data.
+    for zfn, cfn in zip(constants.ZIPCODE_ZIP_FILENAMES,
+                        constants.ZIPCODE_CSV_FILENAMES):
+        with zipfile.ZipFile(str(tmp_path / zfn), mode='w') as zipf:
+            zipf.writestr(cfn, "")
+
+    TT.make_database_from_zip_files(tmp_path, tmp_path)
+    assert not (tmp_path / constants.DATABASE_FILENAME).exists()
+
+
+@pytest.mark.parametrize(
+    ("outname", ),
+    ((constants.DATABASE_FILENAME, ),
+     ("out.db", ),
+     )
+)
+def test_make_database_from_zip_files(outname, my_datadir, tmp_path):
+    TT.make_database_from_zip_files(my_datadir, tmp_path, outname=outname)
+    db_path = tmp_path / outname
+
+    assert db_path.exists()
+    with db.get_session(str(db_path)) as dbs:
+        assert dbs.query(models.Zipcode).all()
