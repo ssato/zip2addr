@@ -28,3 +28,4 @@ pytest-randomly
 # see: https://notes.crmarsh.com/python-tooling-could-be-much-much-faster
 # ruff; python_version > '3.6'
 ruff
+httpx
