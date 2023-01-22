@@ -2,9 +2,11 @@
 # SPDX-License-Identifier: MIT
 """CLI frontend to manage database files.
 """
+import pathlib
+
 import click
 
-from . import constants, datasrc
+from . import constants, datagen
 
 
 @click.group()
@@ -13,14 +15,30 @@ def main():
     """
 
 
+# ref.
+# - https://click.palletsprojects.com/en/8.1.x/options/#multi-value-options
 @main.command()
-@main.option("--datadir", "-d", default='.')
-@main.option("--roman", "-R", default=constants.ROMAN_ZIPCODE_FILENAME)
-@main.option("--kana", "-K", default=constants.KANA_ZIPCODE_FILENAME)
-@main.option("--out", "-O", default=constants.JSON_FILENAME)
-def initdb(datadir: str, roman: str, kana: str, out: str):
+@click.option("--datadir", "-d", default='.')
+@click.option("--output", "-o", default=constants.DATABASE_FILEPATH)
+@click.option(
+    "--zip-filenames", "-Z", nargs=2,
+    default=constants.ZIPCODE_ZIP_FILENAMES
+)
+@click.option(
+    "--csv-filenames", "-C", nargs=2,
+    default=constants.ZIPCODE_CSV_FILENAMES
+)
+def initdb(
+    datadir: str, output: str,
+    zip_filenames: tuple[str, str],
+    csv_filenames: tuple[str, str],
+):
     """Prase csv files and dump its result as a database file.
     """
-    datasrc.make_database_from_csv_files(
-        datadir=datadir, roman_filename=roman, kana_filename=kana, outpath=out
+    opath = pathlib.Path(output)
+    (outdir, outname) = (opath.parent, opath.name)
+
+    datagen.make_database_from_zip_files(
+        pathlib.Path(datadir), outdir, zip_filenames=zip_filenames,
+        csv_filenames=csv_filenames, outname=outname
     )
