@@ -1,7 +1,8 @@
 """Functions for CRUD operations.
 """
 from sqlalchemy.orm import Session
-from . import models, schemas
+
+from . import constants, models, schemas
 
 
 def get_zipcode(dbs: Session, zipcode: str) -> models.Zipcode:
@@ -22,15 +23,17 @@ def get_zipcodes(
 
 def get_zipcodes_by_partial_zipcode(
         dbs: Session, partial_zipcode: str,
-        skip: int = 0, limit: int = 100
+        skip: int = 0, limit: int = constants.LIMIT
 ) -> list[models.Zipcode]:
     """Get model instances of zip code by partial zip code string.
     """
-    return dbs.query(
+    res = dbs.query(
         models.Zipcode
     ).filter(
         models.Zipcode.zipcode.startswith(partial_zipcode)
-    ).offset(skip).limit(limit).all()
+    ).offset(skip)
+
+    return res.limit(limit).all() if limit > 0 else res.all()
 
 
 def create_address(
