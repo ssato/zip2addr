@@ -8,7 +8,8 @@ from . import constants, models, schemas
 
 
 def get_zipcode(
-    dbs: Session, zipcode: str
+    dbs: Session,
+    zipcode: str,
 ) -> typing.Optional[models.Zipcode]:
     """Get *a* model instance of zip code by a zip code string.
     """
