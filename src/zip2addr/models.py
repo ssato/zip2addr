@@ -88,3 +88,31 @@ class Zipcode(db.Base):
     address = sqlalchemy.orm.relationship(
         "Address", back_populates="zipcode", uselist=False
     )
+
+    def as_dict(self):
+        """Represents self as a dict object.
+
+        .. todo:: https://docs.sqlalchemy.org/en/14/orm/dataclasses.html
+        """
+        def get_addr_child_attr(child: str, attr: str):
+            """Get an address' child's attr.
+            """
+            # .. todo:: SAWarning: Multiple rows returned with uselist=False...
+            child= getattr(self.address, child, None)
+            return "" if child is None else getattr(child, attr)
+
+        return dict(
+            zipcode=self.zipcode,
+
+            pref=self.address.pref,
+            city_ward=self.address.city_ward,
+            house_numbers=self.address.house_numbers,
+
+            roman_pref=get_addr_child_attr("roman", "pref"),
+            roman_city_ward=get_addr_child_attr("roman", "city_ward"),
+            roman_house_numbers=get_addr_child_attr("roman", "house_numbers"),
+
+            kana_pref=get_addr_child_attr("kana", "pref"),
+            kana_city_ward=get_addr_child_attr("kana", "city_ward"),
+            kana_house_numbers=get_addr_child_attr("kana", "house_numbers")
+        )
