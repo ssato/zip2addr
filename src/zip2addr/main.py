@@ -2,12 +2,12 @@
 """
 import fastapi
 
+from .routers import (
+    ping,
+    zipcode,
+)
+
 
 APP = fastapi.FastAPI()
-
-
-@APP.get('/')
-async def usage():
-    """API: usage.
-    """
-    return dict(message="Usage: GET /?zipcode=<zipcode>")
+APP.include_router(ping.ROUTER)
+APP.include_router(zipcode.ROUTER)
