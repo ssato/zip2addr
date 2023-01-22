@@ -5,6 +5,17 @@
 """
 import pydantic
 
+from . import (
+    constants,
+)
+
+
+class Pong(pydantic.BaseModel):
+    """pong."""
+    message: str = pydantic.Field("Pong!", example="Pong!")
+    name: str = pydantic.Field(constants.NAME)
+    version: list[int] = pydantic.Field(constants.VERSION)
+
 
 class AddressBase(pydantic.BaseModel):
     """Address base."""

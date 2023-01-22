@@ -4,6 +4,7 @@ import fastapi
 
 from .. import (
     constants,
+    schemas,
 )
 
 
@@ -11,11 +12,11 @@ ROUTER = fastapi.APIRouter()
 
 PING_RESPONSE = dict(
     message="Pong!", name=constants.NAME,
-    version='.'.join([str(v) for v in constants.VERSION]),
+    version=list(constants.VERSION),
 )
 
 
-@ROUTER.get("/ping/")
+@ROUTER.get("/ping/", response_model=schemas.Pong)
 async def ping():
     """ping.
     """
