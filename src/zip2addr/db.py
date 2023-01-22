@@ -3,13 +3,12 @@
 .. seealso:: https://fastapi.tiangolo.com/ja/tutorial/sql-databases/
 """
 import sqlalchemy
-import sqlalchemy.ext.declarative
 import sqlalchemy.orm
 
 from . import constants
 
 
-Base = sqlalchemy.ext.declarative.declarative_base()
+Base = sqlalchemy.orm.declarative_base()
 
 
 def get_engine(
