@@ -52,7 +52,7 @@ def get_session(
         yield dbs
         if not read_only:
             dbs.commit()
-    except:  # noqa: E722
+    except BaseException:
         if not read_only:
             dbs.rollback()
         raise
