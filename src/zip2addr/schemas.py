@@ -28,13 +28,6 @@ class AddressCreate(AddressBase):
     """Address."""
 
 
-class Address(AddressCreate):
-    """Address."""
-    class Config:
-        """Configurations to pydantic."""
-        orm_mode = True
-
-
 class RomanAddressCreate(AddressBase):
     """Roman address."""
 
@@ -54,6 +47,15 @@ class KanaAddressCreate(AddressBase):
 
 class KanaAddress(KanaAddressCreate):
     """Roman address."""
+    address_id: int
+
+    class Config:
+        """Configurations to pydantic."""
+        orm_mode = True
+
+
+class Address(AddressCreate):
+    """Address."""
     address_id: int
 
     class Config:
