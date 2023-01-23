@@ -34,7 +34,6 @@ def init(engine):
     Base.metadata.create_all(bind=engine)
 
 
-@contextlib.contextmanager
 def get_session(
     filepath: typing.Union[str, pathlib.Path], read_only: bool = False
 ):
@@ -59,3 +58,18 @@ def get_session(
         raise
     finally:
         dbs.close()
+
+
+def get_default_session():
+    """Get a default database session.
+    """
+    yield from get_session(constants.DATABASE_FILEPATH)
+
+
+@contextlib.contextmanager
+def get_session_ctx(
+    filepath: typing.Union[str, pathlib.Path], read_only: bool = False
+):
+    """Get a database session can be used with 'with' statement.
+    """
+    yield from get_session(filepath, read_only)

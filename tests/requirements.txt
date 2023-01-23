@@ -28,4 +28,7 @@ pytest-randomly
 # see: https://notes.crmarsh.com/python-tooling-could-be-much-much-faster
 # ruff; python_version > '3.6'
 ruff
+# for test cases of web ui using fastapi
 httpx
+# for test cases of http clients using requests
+requests-mock

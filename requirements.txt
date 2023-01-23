@@ -2,4 +2,5 @@ anyconfig
 click
 fastapi
 pydantic
+requests
 sqlalchemy

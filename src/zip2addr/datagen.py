@@ -45,6 +45,7 @@ import typing
 import zipfile
 
 import anyconfig
+import requests
 
 from . import constants, db, models
 
@@ -91,6 +92,36 @@ def backup_if_it_exists(
             suffix = f"{str(time.time()).replace('.', '_')}"
 
         filepath.rename(f"{filepath!s}.{suffix}")
+
+
+def download_file_from_url(
+    url: str,
+    outdir: pathlib.Path,
+    outname: str,
+    **req_options
+):
+    """Download the file of the url.
+    """
+    resp = requests.get(url, **req_options)
+    if resp.ok:
+        if not outdir.exists():
+            outdir.mkdir(parents=True)
+
+        opath = outdir / outname
+        backup_if_it_exists(opath)
+        opath.write_bytes(resp.content)
+
+
+def download_zipcode_zip_files(
+    outdir: pathlib.Path,
+    zip_urls: tuple[str, ...] = constants.ZIPCODE_ZIP_FILE_URLS,
+    zip_filenames: tuple[str, ...] = constants.ZIPCODE_ZIP_FILENAMES,
+    **req_options
+):
+    """Download zipcode zip files.
+    """
+    for url, filename in zip(zip_urls, zip_filenames):
+        download_file_from_url(url, outdir, filename, **req_options)
 
 
 def extract_file_from_zip_file(
@@ -223,16 +254,16 @@ def load_json_and_save_as_db(
 
     backup_if_it_exists(outpath)
 
-    with db.get_session(outpath) as dbs:
+    with db.get_session_ctx(outpath) as dbs_ctx:
         for zdata in anyconfig.load(filepath):
             addr = models.Address(
                 pref=zdata['pref'],
                 city_ward=zdata['city_ward'],
                 house_numbers=zdata['house_numbers']
             )
-            dbs.add(addr)
-            dbs.commit()
-            dbs.refresh(addr)
+            dbs_ctx.add(addr)
+            dbs_ctx.commit()
+            dbs_ctx.refresh(addr)
 
             kana_addr = models.KanaAddress(
                 pref=zdata['kana_pref'],
@@ -240,9 +271,9 @@ def load_json_and_save_as_db(
                 house_numbers=zdata['kana_house_numbers'],
                 address_id=addr.id
             )
-            dbs.add(kana_addr)
-            dbs.commit()
-            dbs.refresh(kana_addr)
+            dbs_ctx.add(kana_addr)
+            dbs_ctx.commit()
+            dbs_ctx.refresh(kana_addr)
 
             roman_addr = models.KanaAddress(
                 pref=zdata['roman_pref'],
@@ -250,16 +281,16 @@ def load_json_and_save_as_db(
                 house_numbers=zdata['roman_house_numbers'],
                 address_id=addr.id
             )
-            dbs.add(roman_addr)
-            dbs.commit()
-            dbs.refresh(roman_addr)
+            dbs_ctx.add(roman_addr)
+            dbs_ctx.commit()
+            dbs_ctx.refresh(roman_addr)
 
             zipcode = models.Zipcode(
                 zipcode=zdata['zipcode'],
                 address_id=addr.id
             )
-            dbs.add(zipcode)
-            dbs.commit()
+            dbs_ctx.add(zipcode)
+            dbs_ctx.commit()
 
 
 def make_database_from_zip_files(

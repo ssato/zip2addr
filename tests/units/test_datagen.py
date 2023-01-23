@@ -6,11 +6,13 @@
 # pylint: disable=missing-module-docstring
 # pylint: disable=missing-class-docstring
 # pylint: disable=missing-function-docstring
+import pathlib
 import shutil
 import time
 import zipfile
 
 import pytest
+import requests_mock
 
 from zip2addr import (
     constants,
@@ -49,6 +51,31 @@ def test_backup_if_it_exists(suffix, tmp_path):
     assert original.exists()
     TT.backup_if_it_exists(original, suffix=suffix)
     assert backup.exists()
+
+
+_ZIP_URL_FILENAME_PAIRS = (
+    (constants.ROMAN_ZIPCODE_URL, constants.ROMAN_ZIPCODE_ZIP_FILENAME),
+    (constants.KANA_ZIPCODE_URL, constants.KANA_ZIPCODE_ZIP_FILENAME),
+)
+
+
+@pytest.mark.parametrize(
+    ("url", "filename"),
+    _ZIP_URL_FILENAME_PAIRS,
+)
+def test_download_file_from_url(url, filename, my_datadir, tmp_path):
+    with requests_mock.Mocker() as mocked_requests:
+        mocked_requests.get(
+            url, status_code=200,
+            content=pathlib.Path(my_datadir / filename).read_bytes()
+        )
+        TT.download_file_from_url(url, tmp_path, filename)
+
+        opath = tmp_path / filename
+        assert opath.exists()
+
+        with zipfile.ZipFile(str(opath)) as zipf:
+            assert zipf.testzip() is None
 
 
 @pytest.mark.parametrize(
@@ -184,8 +211,8 @@ def test_load_json_and_save_as_db(my_datadir, tmp_path):
 
     engine = db.get_engine(str(outpath))
     db.init(engine)
-    with db.get_session(outpath) as dbs:
-        assert dbs.query(models.Zipcode).all()
+    with db.get_session_ctx(outpath) as dbs_ctx:
+        assert dbs_ctx.query(models.Zipcode).all()
 
 
 def test_make_database_from_zip_files_errors(tmp_path):
@@ -217,5 +244,5 @@ def test_make_database_from_zip_files(outname, my_datadir, tmp_path):
     db_path = tmp_path / outname
 
     assert db_path.exists()
-    with db.get_session(str(db_path)) as dbs:
-        assert dbs.query(models.Zipcode).all()
+    with db.get_session_ctx(db_path) as dbs_ctx:
+        assert dbs_ctx.query(models.Zipcode).all()

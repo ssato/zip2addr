@@ -51,9 +51,9 @@ def search_by_zipcode(
         utils.get_logger().error(f"Not found: {db_path}")
         return []
 
-    with db.get_session(dpath, read_only=True) as dbs:
+    with db.get_session_ctx(dpath, read_only=True) as dbs_ctx:
         res = crud.get_zipcodes_by_partial_zipcode(
-            dbs, zipcode, skip=skip, limit=limit
+            dbs_ctx, zipcode, skip=skip, limit=limit
         )
         if not res:
             utils.get_logger().warning(f"Not found {zipcode} in {db_path}")
