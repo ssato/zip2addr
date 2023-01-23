@@ -26,5 +26,4 @@ CLIENT = fastapi.testclient.TestClient(main.APP)
 def test_ping():
     resp = CLIENT.get("/ping/")
     assert resp.status_code == 200
-    assert resp.json() == 
-    assert TT.PING_RESPONSE
+    assert resp.json() == TT.PING_RESPONSE
