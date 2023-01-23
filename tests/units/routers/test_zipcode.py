@@ -25,7 +25,7 @@ from zip2addr import (
     db,
     main,
 )
-from zip2addr.routers import zipcode as TT
+# from zip2addr.routers import zipcode as TT
 
 
 CLIENT = fastapi.testclient.TestClient(main.APP)

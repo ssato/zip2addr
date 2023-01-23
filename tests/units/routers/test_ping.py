@@ -10,9 +10,7 @@
 # .. seealso::
 #    https://fastapi.tiangolo.com/tutorial/testing/
 #
-import fastapi
 import fastapi.testclient
-import pytest
 
 from zip2addr import (
     main,
