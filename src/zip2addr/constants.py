@@ -7,6 +7,20 @@ NAME: typing.Final[str] = "zip2addr"
 VERSION: tuple[int, int, int] = (0, 1, 0)
 
 # .. seealso:: https://www.post.japanpost.jp/zipcode/download.html
+ROMAN_ZIPCODE_URL: typing.Final[str] = (
+    "https://www.post.japanpost.jp/zipcode/dl/"
+    "roman/ken_all_rome.zip"
+)
+KANA_ZIPCODE_URL: typing.Final[str] = (
+    "https://www.post.japanpost.jp/zipcode/dl/"
+    "kogaki/zip/ken_all.zip"
+)
+ZIPCODE_ZIP_FILE_URLS: typing.Final[tuple[str, ...]] = (
+    ROMAN_ZIPCODE_URL,
+    KANA_ZIPCODE_URL,
+)
+
+# .. seealso:: https://www.post.japanpost.jp/zipcode/download.html
 ROMAN_ZIPCODE_ZIP_FILENAME: typing.Final[str] = "ken_all_rome.zip"
 KANA_ZIPCODE_ZIP_FILENAME: typing.Final[str] = "ken_all.zip"
 ZIPCODE_ZIP_FILENAMES: tuple[str, ...] = (
