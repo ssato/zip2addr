@@ -34,20 +34,27 @@ def init(engine):
     Base.metadata.create_all(bind=engine)
 
 
-def get_session(
+def get_session_class(
     filepath: typing.Union[str, pathlib.Path], read_only: bool = False
 ):
-    """Get a database session.
+    """Get a database session class.
     """
     engine = get_engine(filepath)
     if not read_only:
         init(engine)
 
-    session_cls = sqlalchemy.orm.sessionmaker(
+    return sqlalchemy.orm.sessionmaker(
         autocommit=False, autoflush=False, bind=engine
     )
 
-    dbs = session_cls()
+
+def get_session(
+    filepath: typing.Union[str, pathlib.Path], read_only: bool = False
+):
+    """Get a database session.
+    """
+    cls = get_session_class(filepath, read_only=read_only)
+    dbs = cls()
     try:
         yield dbs
         if not read_only:
